@@ -1,0 +1,75 @@
+.TH COMPENDIUM "1" "November 2019" "1.0" "User Commands"
+.SH NAME
+compendium \- iteratively download YouTube playlists
+.SH SYNOPSIS
+.B compendium
+[\fI\,OPTION\/\fR]
+.br
+.B compendium
+init [\fI\,OPTION\/\fR]... \fI\,LIST\/\fR
+.br
+.B compendium
+get [\fI\,OPTION\/\fR]... \fI\,LIST\/\fR
+.SH DESCRIPTION
+.PP
+Compendium is a YouTube-dl wrapper to iteratively download playlists from
+YouTube.com.
+.br
+Downloading a playlist with Compendium comes in two steps:
+.PP
+\- Create a reference for the playlist in the application's local directory
+using \fI\,init\/\fR
+.br
+\- Download the playlist with YouTube-dl through the \fI\,get\/\fR sub-command.
+.PP
+Calling \fI\,get\/\fR multiple times makes Compendium perform a diff of the
+local reference with the actual content of the playlist so that only new entries
+are downloaded each time.
+.br
+Each steps require the ID of a playlist to process. Playlists IDs can be found
+in YouTube playlists URLs after the \fI\,&list=\/\fR query parameter.
+.TP
+global options
+.TP
+\fB\-h\fR
+Print program help text and exit
+.TP
+\fB\-V\fR
+Print program version and exit
+.TP
+init options
+.TP
+\fB\-c\fR \fI\,COMMAND\/\fR
+Use the specified command-line when calling YouTube-dl
+.TP
+\fB\-i\fR \fI\,FILE\/\fR
+File containing video IDs to use as a reference
+.TP
+get options
+.TP
+\fB\-f\fR
+Force (re\-)downloading content
+.SH AUTHOR
+Written by Valentin Lahaye.
+.SH "REPORTING BUGS"
+Report any bugs to <https://github.com/vallahaye/compendium/issues/>
+.SH COPYRIGHT
+.PP
+Copyright 2019 The Compendium development team
+.br
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+.br
+You may obtain a copy of the License at
+.PP
+   <http://www.apache.org/licenses/LICENSE-2.0>
+.PP
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.br
+See the License for the specific language governing permissions and
+limitations under the License.
+.SH "SEE ALSO"
+YouTube-dl command-line documentation
+<http://ytdl-org.github.io/youtube-dl/documentation.html>
