@@ -5,13 +5,13 @@ IFS=$"\n\t"
 
 usage() {
   cat <<EOF
-usage: compendium [-h] [-v]
+usage: compendium [-h] [-V]
                   init [-c COMMAND] [-i FILE] <list>
                   get [-f] <list>
 
 options:
   -h		Print this help text and exit
-  -v		Print program version and exit
+  -V		Print program version and exit
   -c COMMAND	Use the specified command-line when calling YouTube-dl
   -i FILE	File containing video IDs to use as a reference
   -f		Force (re-)downloading content
