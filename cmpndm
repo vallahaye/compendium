@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+
+# Copyright 2019 The Compendium development team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+usage() {
+  cat <<EOF
+usage: cmpndm [-h] [-V]
+              init [-c COMMAND] [-b FILE] <list>
+              init [-f FILE] <list>
+              deinit [-f FILE] <list>
+              get [-a] <list>
+
+options:
+  -h          Print this help text and exit
+  -V          Print program version and exit
+  -c COMMAND  Use the specified command-line when calling YouTube-dl
+  -b FILE     Batch file containing video IDs to use as a reference
+  -f FILE     Gzip archive file to create/extract
+  -a          Download all content
+
+examples:
+
+  cmpndm init -c "-o '%(title)s.%(ext)s' -f bestaudio --extract-audio --audio-format mp3" PL...
+
+  cmpndm init -f example.tar.gz PL...
+
+  cmpndm deinit -f example.tar.gz PL...
+
+  cmpndm get PL...
+EOF
+}
+
+die() {
+  local err="${1:-something went wrong}"
+  echo "compendium:" "$err"
+  exit 1
+}
+
+lock() {
+  local file="$HOME/.compendium/lock"
+  exec 3>"$file"
+  trap 'exec 3>&-' EXIT
+  flock -xn 3 || die "could not acquire lock file '$file'."
+}
+
+init() {
+  local batch
+  local cache
+  local cmd
+  local file
+  local OPTIND
+  while getopts ":f:c:b:" opt; do
+    case "$opt" in
+      f)
+        file="$OPTARG"
+        ;;
+      c)
+        cmd="$OPTARG"
+        ;;
+      b)
+        batch="$OPTARG"
+        ;;
+      :)
+        die "option '-$OPTARG' requires an argument. See 'cmpndm -h'."
+        ;;
+      \?)
+        die "unknown option '-$OPTARG'. See 'cmpndm -h'."
+        ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+  [[ "$#" -ne 0 ]] || die "missing positional argument. See 'cmpndm -h'."
+  cache="$HOME/.compendium/cache/$1"
+  if [[ -d "$cache" ]]; then
+    echo "warning: reference exists. To continue would lead to its removal."
+    echo "See 'cmpndm -h' to save the reference before deleting."
+    while true; do
+      read -r -p "Proceed init ? [Y/n] " ans
+      case "$ans" in
+        Y*)
+          deinit "$1"
+          break
+          ;;
+        "")
+          ;&
+        n*)
+          exit 0
+          ;;
+        *)
+          echo "Please answer 'Yes' or 'no'."
+          ;;
+      esac
+    done
+  fi
+  mkdir -p "$cache"
+  if [[ -z "${file:-}" ]]; then
+    xargs -n 1 <<< "${cmd:-}" > "$cache/cmd.txt"
+    touch "$cache/list.txt"
+    [[ -z "${batch:-}" ]] || cp "$batch" "$cache/list.txt"
+  else
+    tar -C "$cache" -xzf "$file"
+  fi
+}
+
+deinit() {
+  local cache
+  local file
+  local OPTIND
+  while getopts ":f:" opt; do
+    case "$opt" in
+      f)
+        file="$OPTARG"
+        ;;
+      :)
+        die "option '-$OPTARG' requires an argument. See 'cmpndm -h'."
+        ;;
+      \?)
+        die "unknown option '-$OPTARG'. See 'cmpndm -h'."
+        ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+  [[ "$#" -ne 0 ]] || die "missing positional argument. See 'cmpndm -h'."
+  cache="$HOME/.compendium/cache/$1"
+  if [[ -d "$cache" ]]; then
+    [[ -z "${file:-}" ]] || tar -C "$cache" -czf "$file" cmd.txt list.txt
+    rm -r "$cache"
+  else
+    echo "Reference does not exist. Nothing to remove."
+  fi
+}
+
+get() {
+  local all=0
+  local batch
+  local cache
+  local cmd
+  local tmp
+  local OPTIND
+  while getopts ":a" opt; do
+    case "$opt" in
+      a)
+        all=1
+        ;;
+      \?)
+        die "unknown option '-$OPTARG'. See 'cmpndm -h'."
+        ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+  [[ "$#" -ne 0 ]] || die "missing positional argument. See 'cmpndm -h'."
+  cache="$HOME/.compendium/cache/$1"
+  [[ -d "$cache" ]] || die "missing reference, please init. See 'cmpndm -h'."
+  tmp="$(mktemp -d -t cmpndm-XXXXXXXXXXXX)"
+  # shellcheck disable=SC2064
+  trap "rm -r '$tmp'" EXIT
+  mapfile -t cmd < "$cache/cmd.txt"
+  youtube-dl -j --flat-playlist "$1" | jq -r '.id' | sort > "$tmp/list.txt"
+  if [[ "$all" -eq 0 ]]; then
+    batch="$tmp/list.txt"
+  else
+    batch="$tmp/batch.txt"
+    comm -13 "$cache/list.txt" "$tmp/list.txt" > "$batch"
+  fi
+  if [[ -s "$batch" ]]; then
+    echo "Up-to-date."
+  else
+    youtube-dl "${cmd[@]}" --batch-file "$batch"
+    cp "$tmp/list.txt" "$cache/list.txt"
+  fi
+}
+
+main() {
+  local OPTIND
+  while getopts ":hV" opt; do
+    case "$opt" in
+      h)
+        usage
+        exit 0
+        ;;
+      V)
+        echo "2.0"
+        exit 0
+        ;;
+      *)
+        ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+  [[ "$#" -ne 0 ]] || die "missing command. See 'cmpndm -h'."
+  [[ "$1" =~ ^(init|deinit|get)$ ]] || die "'$1' is not a compendium command. See 'cmpndm -h'."
+  mkdir -p "$HOME/.compendium"
+  lock
+  "$@"
+}
+
+main "$@"
