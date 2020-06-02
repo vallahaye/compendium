@@ -2,13 +2,16 @@
 .SH NAME
 compendium \- iteratively download YouTube playlists
 .SH SYNOPSIS
-.B compendium
+.B cmpndm
 [\fI\,OPTION\/\fR]
 .br
-.B compendium
+.B cmpndm
 init [\fI\,OPTION\/\fR]... \fI\,LIST\/\fR
 .br
-.B compendium
+.B cmpndm
+deinit [\fI\,OPTION\/\fR]... \fI\,LIST\/\fR
+.br
+.B cmpndm
 get [\fI\,OPTION\/\fR]... \fI\,LIST\/\fR
 .SH DESCRIPTION
 .PP
@@ -18,16 +21,19 @@ YouTube.com.
 Downloading a playlist with Compendium comes in two steps:
 .PP
 \- Create a reference for the playlist in the application's local directory
-using \fI\,init\/\fR
+using the \fI\,init\/\fR sub-command
 .br
 \- Download the playlist with YouTube-dl through the \fI\,get\/\fR sub-command.
 .PP
 Calling \fI\,get\/\fR multiple times makes Compendium perform a diff of the
-local reference with the actual content of the playlist so that only new entries
-are downloaded each time.
+local reference with the actual content of the playlist so that only new
+entries are downloaded each time.
 .br
 Each steps require the ID of a playlist to process. Playlists IDs can be found
 in YouTube playlists URLs after the \fI\,&list=\/\fR query parameter.
+.PP
+Removing the local reference of a playlist can be done using the
+\fI\,deinit\/\fR sub-command.
 .TP
 global options
 .TP
@@ -42,13 +48,21 @@ init options
 \fB\-c\fR \fI\,COMMAND\/\fR
 Use the specified command-line when calling YouTube-dl
 .TP
-\fB\-i\fR \fI\,FILE\/\fR
-File containing video IDs to use as a reference
+\fB\-b\fR \fI\,FILE\/\fR
+Batch file containing video IDs to use as a reference
+.TP
+\fB\-f\fR \fI\,FILE\/\fR
+Gzip archive file containing a saved reference to extract
+.TP
+deinit options
+.TP
+\fB\-f\fR \fI\,FILE\/\fR
+Gzip archive file to create to save the reference before removal
 .TP
 get options
 .TP
-\fB\-f\fR
-Force (re\-)downloading content
+\fB\-a\fR
+Download all content
 .SH AUTHOR
 Written by Valentin Lahaye.
 .SH "REPORTING BUGS"
